@@ -117,44 +117,50 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
         if len(headings) < 1:
             return False
 
-        items = []  # [{headingNum,text,position,anchor_id},...]
+        headingItems = []  # [HeadingItem,...]
         for heading in headings:
             if begin < heading.end():
+
                 lines = self.view.lines(heading)
                 if len(lines) == 1:
                     # handle hash headings, ### chapter 1
                     r = sublime.Region(
                         heading.end(), self.view.line(heading).end())
-                    text = self.view.substr(r)
-                    indent = heading.size() - 1
-                    items.append({'headingNum': indent, 'text': text, 'position': heading.begin()})
+                    headingItem = HeadingItem()
+                    headingItem.h = heading.size() - 1
+                    headingItem.text = self.view.substr(r)
+                    headingItem.position = heading.begin()
+                    headingItems.append(headingItem)
                 elif len(lines) == 2:
                     # handle - or + headings, Title 1==== section1----
                     text = self.view.substr(lines[0])
                     if text.strip():
-                        indent = 1 if (
+                        headingItem = HeadingItem()
+                        headingItem.h = 1 if (
                             self.view.substr(lines[1])[0] == '=') else 2
-                        items.append({'headingNum': indent, 'text': text, 'position':heading.begin()})
+                        headingItem.text = text
+                        headingItem.position = heading.begin()
+                        headingItems.append(headingItem)
 
-        if len(items) < 1:
+        if len(headingItems) < 1:
             return ''
 
         # Shape TOC  ------------------
-        items = format(items)
+        headingItems = format(headingItems)
 
         # Depth limit  ------------------
         _depth = int(attrs['depth'])
         if 0 < _depth:
-            items = list(filter((lambda i: i['headingNum'] <= _depth), items))
+            headingItems = list(filter((lambda i: i.h <= _depth), headingItems))
 
         # Create TOC  ------------------
         toc = ''
         _ids = []
 
-        for item in items:
+        for item in headingItems:
             _id = None
-            _indent = item['headingNum'] - 1
-            _text = item['text']
+            _indent = item.h - 1
+            _text = item.text
             _text = pattern_tag.sub('', _text) # remove html tags
             _text = _text.rstrip() # remove end space
 
@@ -207,25 +213,25 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
             else:
                 toc += list_prefix + '[' + _text + '][' + _id + ']\n'
 
-            item['anchor_id'] = _id
+            item.anchor_id = _id
 
-        self.update_anchors(edit, items, strtobool(attrs['autoanchor']))
+        self.update_anchors(edit, headingItems, strtobool(attrs['autoanchor']))
 
         return toc
 
-    def update_anchors(self, edit, items, autoanchor):
+    def update_anchors(self, edit, headingItems, autoanchor):
         """Inserts, updates or deletes a link anchor in the line before each header."""
         v = self.view
         # Iterate in reverse so that inserts don't affect the position
-        for item in reversed(items):
-            anchor_region = v.line(item['position'] - 1)  # -1 to get to previous line
+        for item in reversed(headingItems):
+            anchor_region = v.line(item.position - 1)  # -1 to get to previous line
             is_update = pattern_anchor.match(v.substr(anchor_region))
             if autoanchor:
                 if is_update:
-                    new_anchor = '<a name="{0}"></a>'.format(item['anchor_id'])
+                    new_anchor = '<a name="{0}"></a>'.format(item.anchor_id)
                     v.replace(edit, anchor_region, new_anchor)
                 else:
-                    new_anchor = '\n<a name="{0}"></a>'.format(item['anchor_id'])
+                    new_anchor = '\n<a name="{0}"></a>'.format(item.anchor_id)
                     v.insert(edit, anchor_region.end(), new_anchor)
 
             else:
@@ -257,7 +263,7 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
 
         return soup.find('markdowntoc').attrs
 
-    def remove_items_in_codeblock(self, items):
+    def remove_items_in_codeblock(self, headingItems):
 
         codeblocks = self.view.find_all("^`{3,}[^`]*$")
         codeblockAreas = [] # [[area_begin, area_end], ..]
@@ -269,8 +275,8 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
                 codeblockAreas.append([area_begin, area_end])
             i += 2
 
-        items = [h for h in items if is_out_of_areas(h.begin(), codeblockAreas)]
-        return items
+        headingItems = [h for h in headingItems if is_out_of_areas(h.begin(), codeblockAreas)]
+        return headingItems
 
     def replace_chars_in_id(self, _str):
         replacements = self.get_setting('id_replacements')
@@ -290,10 +296,10 @@ def is_out_of_areas(num, areas):
             return False
     return True
 
-def format(items):
+def format(headingItems):
     headings = []
-    for item in items:
-        headings.append(item['headingNum'])
+    for item in headingItems:
+        headings.append(item.h)
     # --------------------------
 
     # minimize diff between headings -----
@@ -304,9 +310,9 @@ def format(items):
     # ----- /minimize diff between headings
 
     # --------------------------
-    for i, item in enumerate(items):
-        item['headingNum'] = headings[i]
-    return items
+    for i, item in enumerate(headingItems):
+        item.h = headings[i]
+    return headingItems
 
 def log(arg):
     arg = str(arg)
@@ -328,6 +334,14 @@ def strtobool(val):
 
 
 # Search and refresh if it's exist
+
+
+class HeadingItem:
+    def __init__(self):
+        self.h = None
+        self.text = None
+        self.position = None
+        self.anchor_id = None
 
 class MarkdowntocUpdate(MarkdowntocInsert):
 
