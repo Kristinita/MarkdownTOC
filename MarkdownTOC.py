@@ -1,9 +1,12 @@
 import sublime
 import sublime_plugin
 import re
-import os.path
 import pprint
-from .bs4 import BeautifulSoup
+import sys
+import os.path
+sys.path.append(os.path.join(os.path.dirname(__file__),'lib'))
+# third party libraries
+from bs4 import BeautifulSoup
 
 # for dbug
 pp = pprint.PrettyPrinter(indent=4)
@@ -251,7 +254,7 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
         tag_str_html = pattern_toc_tag_start.sub("<", tag_str)
         tag_str_html = pattern_toc_tag_start.sub(">", tag_str_html)
 
-        soup = BeautifulSoup(tag_str_html)
+        soup = BeautifulSoup(tag_str_html, "html.parser")
 
         return soup.find('markdowntoc').attrs
 
