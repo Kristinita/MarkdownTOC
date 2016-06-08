@@ -117,7 +117,7 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
         if len(headings) < 1:
             return False
 
-        items = []  # [[headingNum,text,position,anchor_id],...]
+        items = []  # [{headingNum,text,position,anchor_id},...]
         for heading in headings:
             if begin < heading.end():
                 lines = self.view.lines(heading)
@@ -127,14 +127,14 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
                         heading.end(), self.view.line(heading).end())
                     text = self.view.substr(r)
                     indent = heading.size() - 1
-                    items.append([indent, text, heading.begin()])
+                    items.append({'headingNum': indent, 'text': text, 'position': heading.begin()})
                 elif len(lines) == 2:
                     # handle - or + headings, Title 1==== section1----
                     text = self.view.substr(lines[0])
                     if text.strip():
                         indent = 1 if (
                             self.view.substr(lines[1])[0] == '=') else 2
-                        items.append([indent, text, heading.begin()])
+                        items.append({'headingNum': indent, 'text': text, 'position':heading.begin()})
 
         if len(items) < 1:
             return ''
@@ -145,7 +145,7 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
         # Depth limit  ------------------
         _depth = int(attrs['depth'])
         if 0 < _depth:
-            items = list(filter((lambda i: i[0] <= _depth), items))
+            items = list(filter((lambda i: i['headingNum'] <= _depth), items))
 
         # Create TOC  ------------------
         toc = ''
@@ -153,8 +153,8 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
 
         for item in items:
             _id = None
-            _indent = item[0] - 1
-            _text = item[1]
+            _indent = item['headingNum'] - 1
+            _text = item['text']
             _text = pattern_tag.sub('', _text) # remove html tags
             _text = _text.rstrip() # remove end space
 
@@ -207,7 +207,7 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
             else:
                 toc += list_prefix + '[' + _text + '][' + _id + ']\n'
 
-            item.append(_id)
+            item['anchor_id'] = _id
 
         self.update_anchors(edit, items, strtobool(attrs['autoanchor']))
 
@@ -218,14 +218,14 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
         v = self.view
         # Iterate in reverse so that inserts don't affect the position
         for item in reversed(items):
-            anchor_region = v.line(item[2] - 1)  # -1 to get to previous line
+            anchor_region = v.line(item['position'] - 1)  # -1 to get to previous line
             is_update = pattern_anchor.match(v.substr(anchor_region))
             if autoanchor:
                 if is_update:
-                    new_anchor = '<a name="{0}"></a>'.format(item[3])
+                    new_anchor = '<a name="{0}"></a>'.format(item['anchor_id'])
                     v.replace(edit, anchor_region, new_anchor)
                 else:
-                    new_anchor = '\n<a name="{0}"></a>'.format(item[3])
+                    new_anchor = '\n<a name="{0}"></a>'.format(item['anchor_id'])
                     v.insert(edit, anchor_region.end(), new_anchor)
 
             else:
@@ -293,7 +293,7 @@ def is_out_of_areas(num, areas):
 def format(items):
     headings = []
     for item in items:
-        headings.append(item[0])
+        headings.append(item['headingNum'])
     # --------------------------
 
     # minimize diff between headings -----
@@ -305,7 +305,7 @@ def format(items):
 
     # --------------------------
     for i, item in enumerate(items):
-        item[0] = headings[i]
+        item['headingNum'] = headings[i]
     return items
 
 def log(arg):
@@ -328,7 +328,6 @@ def strtobool(val):
 
 
 # Search and refresh if it's exist
-
 
 class MarkdowntocUpdate(MarkdowntocInsert):
 
