@@ -150,7 +150,6 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
         # Create TOC  ------------------
         toc = ''
         _ids = []
-        level_counters = [0]
 
         for item in items:
             _id = None
