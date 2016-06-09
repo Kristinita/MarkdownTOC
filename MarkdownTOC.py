@@ -256,8 +256,9 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
     def get_attibutes_from(self, tag_str):
         """return dict of settings from tag_str"""
 
+        # convert TOC tag to HTML-like tag
         tag_str_html = pattern_toc_tag_start.sub("<", tag_str)
-        tag_str_html = pattern_toc_tag_start.sub(">", tag_str_html)
+        tag_str_html = pattern_toc_tag_end.sub(">", tag_str_html)
 
         soup = BeautifulSoup(tag_str_html, "html.parser")
 
@@ -324,6 +325,8 @@ class AutoRunner(sublime_plugin.EventListener):
         ext = ext.lower()
         if ext in [".md", ".markdown", ".mdown", ".mdwn", ".mkdn", ".mkd", ".mark"]:
             view.run_command('markdowntoc_update')
+
+# Data Type
 
 class HeadingItem:
     def __init__(self):
