@@ -19,8 +19,6 @@ pattern_anchor = re.compile(r'<a\s+name="[^"]+"\s*>\s*</a>')
 pattern_toc_tag_start = re.compile(r'<!-- *')
 pattern_toc_tag_end = re.compile(r'-->')
 
-pattern_h1_h2_equal_dash = "^.*?(?:(?:\r\n)|\n|\r)(?:-+|=+)$"
-
 TOCTAG_START = "<!-- MarkdownTOC -->"
 TOCTAG_END = "<!-- /MarkdownTOC -->"
 
@@ -109,6 +107,7 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
 
         # Search headings in docment
         pattern_hash = "^#+?[^#]"
+        pattern_h1_h2_equal_dash = "^.*?(?:(?:\r\n)|\n|\r)(?:-+|=+)$"
         headings = self.view.find_all(
             "%s|%s" % (pattern_h1_h2_equal_dash, pattern_hash))
 
