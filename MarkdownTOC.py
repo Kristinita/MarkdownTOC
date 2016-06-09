@@ -34,11 +34,11 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
                 attrs = self.get_settings()
 
                 # add TOCTAG
-                toc = TOCTAG_START + "\n"
-                toc += "\n"
-                toc += self.get_toc(attrs, sel.end(), edit)
-                toc += "\n"
-                toc += TOCTAG_END + "\n"
+                toc = TOCTAG_START + "\n"\
+                    + "\n"\
+                    + self.get_toc(attrs, sel.end(), edit)\
+                    + "\n"\
+                    + TOCTAG_END + "\n"
 
                 self.view.insert(edit, sel.begin(), toc)
                 log('inserted TOC')
