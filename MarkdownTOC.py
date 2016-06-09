@@ -146,7 +146,7 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
             return ''
 
         # Shape TOC  ------------------
-        headingItems = format(headingItems)
+        headingItems = self.format(headingItems)
 
         # Depth limit  ------------------
         _depth = int(attrs['depth'])
@@ -290,29 +290,55 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
             _str = _str.translate(table)
         return _str
 
+    def format(self, headingItems):
+        headings = []
+        for item in headingItems:
+            headings.append(item.h)
+        # --------------------------
+
+        # minimize diff between headings -----
+        _depths = list(set(headings)) # sort and unique
+        # replace with depth rank
+        for i, item in enumerate(headings):
+            headings[i] = _depths.index(headings[i])+1
+        # ----- /minimize diff between headings
+
+        # --------------------------
+        for i, item in enumerate(headingItems):
+            item.h = headings[i]
+        return headingItems
+
+# Search and refresh if it's exist
+
+class MarkdowntocUpdate(MarkdowntocInsert):
+
+    def run(self, edit):
+        MarkdowntocInsert.find_tag_and_insert(self, edit)
+
+
+class AutoRunner(sublime_plugin.EventListener):
+
+    def on_pre_save(self, view):
+        # limit scope
+        root, ext = os.path.splitext(view.file_name())
+        ext = ext.lower()
+        if ext in [".md", ".markdown", ".mdown", ".mdwn", ".mkdn", ".mkd", ".mark"]:
+            view.run_command('markdowntoc_update')
+
+class HeadingItem:
+    def __init__(self):
+        self.h = None
+        self.text = None
+        self.position = None
+        self.anchor_id = None
+
+# Util
+
 def is_out_of_areas(num, areas):
     for area in areas:
         if area[0] < num and num < area[1]:
             return False
     return True
-
-def format(headingItems):
-    headings = []
-    for item in headingItems:
-        headings.append(item.h)
-    # --------------------------
-
-    # minimize diff between headings -----
-    _depths = list(set(headings)) # sort and unique
-    # replace with depth rank
-    for i, item in enumerate(headings):
-        headings[i] = _depths.index(headings[i])+1
-    # ----- /minimize diff between headings
-
-    # --------------------------
-    for i, item in enumerate(headingItems):
-        item.h = headings[i]
-    return headingItems
 
 def log(arg):
     arg = str(arg)
@@ -331,29 +357,3 @@ def strtobool(val):
             raise ValueError("invalid truth value %r" % (val,))
     else:
         return bool(val)
-
-
-# Search and refresh if it's exist
-
-
-class HeadingItem:
-    def __init__(self):
-        self.h = None
-        self.text = None
-        self.position = None
-        self.anchor_id = None
-
-class MarkdowntocUpdate(MarkdowntocInsert):
-
-    def run(self, edit):
-        MarkdowntocInsert.find_tag_and_insert(self, edit)
-
-
-class AutoRunner(sublime_plugin.EventListener):
-
-    def on_pre_save(self, view):
-        # limit scope
-        root, ext = os.path.splitext(view.file_name())
-        ext = ext.lower()
-        if ext in [".md", ".markdown", ".mdown", ".mdwn", ".mkdn", ".mkd", ".mark"]:
-            view.run_command('markdowntoc_update')
