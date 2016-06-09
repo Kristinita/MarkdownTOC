@@ -267,13 +267,14 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
     def remove_items_in_codeblock(self, headingItems):
 
         codeblocks = self.view.find_all("^`{3,}[^`]*$")
-        codeblockAreas = [] # [[area_begin, area_end], ..]
+        codeblockAreas = []
         i = 0
         while i < len(codeblocks)-1:
-            area_begin = codeblocks[i].begin()
-            area_end   = codeblocks[i+1].begin()
-            if area_begin and area_end:
-                codeblockAreas.append([area_begin, area_end])
+            area = Area()
+            area.begin = codeblocks[i].begin()
+            area.end   = codeblocks[i+1].begin()
+            if area.begin and area.end:
+                codeblockAreas.append(area)
             i += 2
 
         headingItems = [h for h in headingItems if is_out_of_areas(h.begin(), codeblockAreas)]
@@ -335,11 +336,16 @@ class HeadingItem:
         self.position = None
         self.anchor_id = None
 
+class Area:
+    def __init__(self):
+        self.begin = None
+        self.end = None
+
 # Util
 
 def is_out_of_areas(num, areas):
     for area in areas:
-        if area[0] < num and num < area[1]:
+        if area.begin < num and num < area.end:
             return False
     return True
 
