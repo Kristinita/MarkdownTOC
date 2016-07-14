@@ -4,6 +4,7 @@ import re
 import pprint
 import sys
 import os.path
+import textwrap
 sys.path.append(os.path.join(os.path.dirname(__file__),'lib'))
 # third party libraries
 from bs4 import BeautifulSoup
@@ -31,14 +32,28 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
             for sel in sels:
                 attrs = self.get_settings()
 
-                # add TOCTAG
-                toc = TOCTAG_START + "\n"\
-                    + "\n"\
-                    + self.get_toc(attrs, sel.end(), edit)\
-                    + "\n"\
-                    + TOCTAG_END + "\n"
+                start_tag = TOCTAG_START
+                toc = self.get_toc(attrs, sel.end(), edit)
+                end_tag = TOCTAG_END
 
-                self.view.insert(edit, sel.begin(), toc)
+                _text = textwrap.dedent(
+                    """\
+                    {start_tag}
+
+                    {toc}\
+
+                    {end_tag}\
+                    """
+                    ).format(**locals()).strip()
+
+                # add TOCTAG
+                # _text = TOCTAG_START + "\n"\
+                #     + "\n"\
+                #     + self.get_toc(attrs, sel.end(), edit)\
+                #     + "\n"\
+                #     + TOCTAG_END + "\n"
+
+                self.view.insert(edit, sel.begin(), _text)
                 log('inserted TOC')
 
         # TODO: process to add another toc when tag exists
@@ -106,8 +121,8 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
     def get_toc(self, attrs, begin, edit):
 
         # Search headings in docment
-        pattern_hash = "^#+?[^#]"
-        pattern_h1_h2_equal_dash = "^.*?(?:(?:\r\n)|\n|\r)(?:-+|=+)$"
+        pattern_hash = "^#{1,6}[^#]"
+        pattern_h1_h2_equal_dash = "^.*?(?:(?:\r\n)|\n|\r)(?:-+|=+)\s*$"
         headings = self.view.find_all(
             "%s|%s" % (pattern_h1_h2_equal_dash, pattern_hash))
 
@@ -125,9 +140,17 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
                     # handle hash headings, ### chapter 1
                     r = sublime.Region(
                         heading.end(), self.view.line(heading).end())
+
+                    #
+                    text = self.view.substr(r)
+                    log('-----')
+                    log(text)
+                    pattern = re.compile(r'^#{1,6}\s*([^#]*)[\s]*$')
+                    text = pattern.sub('\\1', text)
+                    log(text)
                     headingItem = HeadingItem()
                     headingItem.h = heading.size() - 1
-                    headingItem.text = self.view.substr(r)
+                    headingItem.text = text
                     headingItem.position = heading.begin()
                     headingItems.append(headingItem)
                 elif len(lines) == 2:
