@@ -11,9 +11,9 @@ import unicodedata
 # for dbug
 pp = pprint.PrettyPrinter(indent=4)
 
-PATTERN_REFERENCE_LINK = re.compile(r'\[.+?\]$') # [Heading][my-id]
+PATTERN_REFERENCE_LINK = re.compile(r'(?!.*\\)\[.+?(?!.*\\)\]') # [Heading][my-id], but ignore escaped bracket \[\]
 PATTERN_IMAGE = re.compile(r'!\[([^\]]+)\]\([^\)]+\)') # ![alt](path/to/image.png)
-PATTERN_EX_ID = re.compile(r'\{#.+?\}$')         # [Heading]{#my-id}
+PATTERN_EX_ID = re.compile(r'\{#.+?\}')         # [Heading]{#my-id}
 PATTERN_TAG = re.compile(r'<.*?>')
 PATTERN_ANCHOR = re.compile(r'<a\s+name="[^"]+"\s*>\s*</a>')
 PATTERN_TOC_TAG_START = re.compile(r'<!-- *')
@@ -311,11 +311,13 @@ class MarkdowntocInsert(sublime_plugin.TextCommand):
 
             # Markdown-Extra special attribute style: e.g. '# heading {#my-anchor}'
             match_ex_id = PATTERN_EX_ID.search(_text)
-
+            self.log(list_reference_link)
             if len(list_reference_link):
                 match = list_reference_link[-1]
                 _text = _text[0:match.start()].replace('[','').replace(']','').rstrip()
                 _id = match.group().replace('[','').replace(']','')
+                self.log(_text)
+                self.log(_id)
             elif match_ex_id:
                 _text = _text[0:match_ex_id.start()].rstrip()
                 _id = match_ex_id.group().replace('{#','').replace('}','')
